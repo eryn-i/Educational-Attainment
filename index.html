@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Education Attainment</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
+<style>
+    body {
+        margin:0;
+        padding:0;
+        font-family:
+        Cambria, Cochin, Georgia, Times, 'Times New Roman', serif; /* Let's change this up later */
+    }
+
+    h1 { /* This is the format for the title */ 
+        position: absolute;
+        left: 50px;
+        top: 10px;
+        padding: 8px 2%;
+        margin: 0;
+        background: rgba(171, 36, 212, 0.8); /* click on the square to change the color */
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        border-radius: 3px;
+        color: whitesmoke;
+        font-size: 1.75em;
+        z-index: 800;
+    }
+
+    section { /* This is the format for the subheader */ 
+        position: absolute;
+        bottom: 20px;
+        left: 6px;
+        width: 350px;
+        margin: 20px auto;
+        padding: 0 15px; /* Keeps the box off the citation in the bottom right*/
+        background: rgba(171, 36, 212, 0.8); /* click on the square to change the color */
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        border-radius: 3px;
+        color: whitesmoke;
+        font-size: 0.75em;
+        z-index: 800;
+	}
+
+    p {  /* This is the format for the paragraph */
+        font-size: 1.25em;
+        line-height: 1.5em;
+	}
+
+    .legend, .temporal-legend {
+        padding: 6px 10px;
+        font: 14px/16px Arial, Helvetica, sans-serif;
+        background: white;
+        background: rgba(171, 36, 212, 0.8); 
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        border-radius: 5px;
+	}
+	#legendTitle {
+  	  	text-align: center;
+   	 	margin-bottom: 15px;
+   		font-variant: small-caps;
+        color: whitesmoke;
+	}
+	.symbolsContainer {
+    	float: left;
+		margin-left: 50px;
+        color: whitesmoke;
+        padding: 0 45px;
+	}
+	.legendCircle {
+     	border-radius:50%; 
+     	border: 1px solid #000000; 
+     	background: rgba(252, 252, 252, 0.6);
+	 	display: inline-block;
+	}
+	.legendValue { /* for the numbers within the legend */
+        position: absolute;
+        right: 20px;
+	}
+    
+    #map {
+        position:absolute;
+        top:0;
+        bottom:0;
+        width:100%;
+        height:100%;
+    }                   
+
+</style>
+
+</head>
+<body>
+<!-- This is the title text --> 
+    <h1>Educational Attainment of a Bachelor's degree or higher, 2022</h1> 
+
+    <div id="map"></div> 
+
+    <section>
+<!-- This is the subheader text -->
+		<h2> Data Estimates Contained to 25 years or older per State or U.S. Territory </h2>
+        <h3> Hover over a population circle to display data values.</h3>
+
+<!-- This is the paragraph text -->
+        <p> This map provides data from the US Census Bureau on U.S. citizens that are 25 years of age or older who have obtained at least a Bachelor's degree in 2022.
+            The map utilizes the proportional symbol type symbolization formatting style.
+            The data is formatted as proportionally scaled circles per State, where the circle grows larger as more people per that State's population have obtained at least a Bachelor's degree.
+        </p>
+
+	</section>
+
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-ajax/2.1.0/leaflet.ajax.min.js"></script>
+
+<script>  
+console.log("hello world!");
+
+/* The map credits from the Leaflet Provider Demo starts here*/
+var map = L.map('map', { 
+    center: [39.5, -95.3],
+    zoom: 4
+});
+
+var Esri_NatGeoWorldMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}', {
+	attribution: 'Tiles &copy; Esri &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC',
+	maxZoom: 16
+}).addTo(map); /* have to include .addTo(map) to add the program - the only part not copied from Leaflet*/
+var Stadia_StamenTonerLines = L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner_lines/{z}/{x}/{y}{r}.{ext}', {
+	minZoom: 0,
+	maxZoom: 20,
+	attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://www.stamen.com/" target="_blank">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+	ext: 'png'
+}).addTo(map);   
+/* The map credits from the Leaflet Provider Demo ends here*/
+
+/* Formatting the data points into circles */
+/* Link to data: https://data.census.gov/table/ACSST5Y2022.S1501?q=Educational%20Attainment%20by%20state&moe=false&tp=false */
+
+$.getJSON("assets/data.geojson")
+    .done(function(data){
+            var info = processData(data);
+            createPropSymbols(info.estimate, data);
+            createLegend(info.min, info.max)
+    })
+    .fail(function(){alert("There has been a problem loading the data.")});
+
+
+function createPropSymbols(estimate, data){
+    states = L.geoJson(data, {    
+        attribution: 'Data: US Census Bureau, Map created by Eryn Stowe', 
+        pointToLayer: function (feature, latlng){
+            return L.circleMarker(latlng, {
+                color: '#b069db',
+                opacity: 1,
+                weight: 2,
+                fillColor: '#b069db', /* change the color of the icons, also change the title color*/
+                fillOpacity: 0.6, 
+                radius: calcRadius(feature.properties.estimate) /* This is the start of the interaction function */
+            }).on({
+                    mouseover: function highlightFeature(e){
+                        this.setStyle({color: 'blue',fillColor: 'blue'});
+                        this.openPopup();
+                    },
+                    mouseout: function resetHighlight(e){
+                        this.setStyle({color:'#b069db', fillColor: '#b069db'});
+                        this.closePopup();
+                        geojson.resetStyle(e.target); /**/
+                    } 
+                })
+            },
+    });
+
+    states.addTo(map); 
+    updatePropSymbols(estimate);
+    }
+function calcRadius(val) {
+    /* This is to change the details of the circles (make them BIG)*/
+    var scaleFactor = 3 
+    var scale = scaleFactor * 0.001;
+    var area = val * scale;
+    return Math.sqrt(area/Math.PI)*2;    }
+
+function updatePropSymbols(estimate){
+    states.eachLayer(function(layer) {
+
+        var props = layer.feature.properties;
+        var radius = calcRadius(props.estimate);
+        var popupContent = "<b>" + props.name +
+            "</b><br>" +
+            "<i>" + props.estimate + " persons</i>";
+        layer.bindPopup(popupContent, {offset: new L.Point(0,-radius)});
+    });
+}
+
+function processData(data) {
+    var estimate = 0;
+    var min = Infinity; 
+    var max = -Infinity;
+
+    for (var feature in data.features) {
+
+        var properties = data.features[feature].properties; 
+
+        for (var attribute in properties) { 
+
+            if ( attribute != 'id' &&
+                attribute != 'name' &&
+                attribute != 'lat' &&
+                attribute != 'lon' ) {
+                    estimate = properties[attribute]
+                    
+                    if (properties[attribute] < min) {	
+					min = properties[attribute];
+					}
+						
+					if (properties[attribute] > max) { 
+						max = properties[attribute]; 
+					}
+            }
+        }
+    }
+
+    return {
+        estimate: estimate,
+        min : min,
+        max : max
+    }
+    }
+L.control.scale({position: 'bottomleft'}).addTo(map);
+
+/* testing section */
+var geojson = null; /* Declare an empty GeoJSON object */
+
+function zoomToFeature(e) {
+    map.fitBounds(e.target.getBounds());
+}
+
+function onEachFeature(feature, layer) {
+    layer.on({
+        mouseover: highlightFeature,
+        click: zoomToFeature,
+        mouseout: resetHighlight
+    });
+}
+
+function createLegend(min, max) {
+        
+    if (min < 10) {	
+        min = 10; 
+    }
+
+    function roundNumber(inNumber) {
+
+            return (Math.round(inNumber/10) * 10);  
+    }
+
+    var legend = L.control( { position: 'bottomright' } );
+
+    legend.onAdd = function(map) {
+
+    var legendContainer = L.DomUtil.create("div", "legend");  
+    var symbolsContainer = L.DomUtil.create("div", "symbolsContainer");
+    var classes = [roundNumber(min), roundNumber((max-min)/2), roundNumber(max)]; 
+    var legendCircle;  
+    var lastRadius = 0;
+    var currentRadius;
+    var margin;
+
+    L.DomEvent.addListener(legendContainer, 'mousedown', function(e) { 
+        L.DomEvent.stopPropagation(e); 
+    });  
+
+    $(legendContainer).append("<h2 id='legendTitle'>Degree Holder per State Pop.</h2>");
+    
+    for (var i = 0; i <= classes.length-1; i++) {  
+
+        legendCircle = L.DomUtil.create("div", "legendCircle");  
+        
+        currentRadius = calcRadius(classes[i]);
+        
+        margin = -currentRadius - lastRadius - 2;
+
+        $(legendCircle).attr("style", "width: " + currentRadius*2 + 
+            "px; height: " + currentRadius*2 + 
+            "px; margin-left: " + margin + "px" );				
+        $(legendCircle).append("<span class='legendValue'>"+classes[i]+" persons</span>");
+
+        $(symbolsContainer).append(legendCircle);
+
+        lastRadius = currentRadius;
+
+    }
+
+    $(legendContainer).append(symbolsContainer); 
+
+    return legendContainer; 
+
+    };
+
+    legend.addTo(map);  
+
+} // end createLegend();
+</script>
+
+</body>
+</html>
