@@ -122,10 +122,11 @@ var map = L.map('map', {
     zoom: 4
 });
 
-var Esri_NatGeoWorldMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}', {
-	attribution: 'Tiles &copy; Esri &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC',
-	maxZoom: 16
-}).addTo(map); /* have to include .addTo(map) to add the program - the only part not copied from Leaflet*/
+var OpenStreetMap_Mapnik = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	maxZoom: 19,
+	attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+});
+.addTo(map); /* have to include .addTo(map) to add the program - the only part not copied from Leaflet*/
 /* The map credits from the Leaflet Provider Demo ends here*/
 
 /* Formatting the data points into circles */
